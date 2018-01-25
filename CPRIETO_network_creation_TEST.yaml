@@ -1,0 +1,50 @@
+heat_template_version: 2015-04-30
+
+description:
+  Template to define new network in a HOT Package
+
+parameters: 
+
+  vn1_name:
+    type: string
+    description: Id of the network to connect the instances to.
+    default: CPRIETO_net1_TEST
+
+  segmentation_id1:
+    type: string
+    label: Segmentation Id VN1
+    default: 1111
+
+  subnet_vn1:
+    type: string
+    label: Subnet VN1
+    default: 192.168.1.0/24
+
+  gateway_vn1:
+    type: string
+    label: Gateway IP VN1
+    default: 192.168.1.1
+
+resources:
+
+  neutron_net_1:
+    type: OS::Neutron::Net
+    properties:
+      name: {get_param: vn1_name}
+      value_specs: {"provider:network_type": "vxlan", "provider:segmentation_id": { get_param: segmentation_id1}}
+
+  neutron_subnet_1:  
+    type: OS::Neutron::Subnet
+    properties:
+      enable_dhcp: true
+      gateway_ip: {get_param: gateway_vn1}
+      name: CPRIETO_subnet1_TEST
+      network_id:
+        get_resource: neutron_net_1 
+      cidr: {get_param: subnet_vn1}
+
+
+outputs:
+
+  net_name:
+    value: {get_param: vn1_name}

@@ -1,0 +1,31 @@
+heat_template_version: 2015-04-30
+
+description:
+  Template to define new Flavor in a HOT Package
+
+parameters: 
+
+  flavor_type1:
+    type: string
+    label: Type of Flavor1
+    description: Type of the instance to be created.
+    default: 4CPU_4096MB_40GB_01
+
+
+resources:
+
+  CPRIETO_4096_4_40_TEST:
+    type: OS::Nova::Flavor
+    properties: 
+      ram: 4096
+      disk: 40
+      swap: 0
+      vcpus: 4
+      extra_specs: {"hw:cpu_policy":"dedicated","hw:mem_page_size":"large"}
+
+  
+outputs: 
+
+  flavor_ID:
+    description: The flavor created id
+    value: { get_resource: CPRIETO_4096_4_40_TEST}
