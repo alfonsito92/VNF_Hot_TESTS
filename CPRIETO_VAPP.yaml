@@ -1,0 +1,169 @@
+heat_template_version: 2015-04-30
+
+description: Template to deploy a complete VAPP one network, one cinder volume, one flavor, one security group and one key
+
+parameters:
+
+  # test_flavor:
+  #   type: string
+  #   label: Flavor for VM
+  #   description: Flavor predefined for VMs
+  #   default: 4CPU_4096MB_40GB_01
+
+  image_id: 
+    type: string
+    description: Image for VM
+    default: Unica_Gen_2VNIC_Cirros_0.3.4
+
+  vm_name:
+    type: string
+    description: Hostname name
+    default: TEST_vm
+
+  vn_name: 
+    type: string
+    description: Id for the virtual network to create
+    default: VN_TEST
+
+  segmentation_id:
+    type: string
+    label: Segmentation id for VN
+    default: 1234
+
+  ip_vm:
+    type: string
+    label: IP address for VM
+    default: 192.168.1.10
+
+  subnet_vn:
+    type: string
+    label: Subnet for VN_TEST
+    default: 192.168.1.0/24
+
+  gateway_vn:
+    type: string
+    label: GW IP VN_TEST
+    default: 192.168.1.1
+
+  volume_type:
+    type: string
+    description: Quality of the Volume to be created
+    default: Platinum_01
+    # FLASH
+    #default: Gold_01
+    # SAS
+    #default: Silver_01
+    # NSAS
+
+  volume_size:
+    type: number
+    description: Size of the block volume
+    default: 50
+    constraints: 
+      - range: { min: 1, max: 1024}
+        description: max size 1TB
+
+  azone_1:
+    type: string
+    label: Availability Zone
+    default: TypeA_01
+    #Server DELL R730
+
+  azone_2:
+    type: string
+    label: Availability Zone
+    default: TypeB_01
+    #Server DELL R730
+
+resources:
+
+#Networks Creation
+  neutron_net:
+    type: OS::Neutron::Net
+    properties:
+      name: {get_param: vn_name}
+      value_specs: {"provider:network_type": "vxlan", "provider:segmentation_id": { get_param: segmentation_id}}
+
+  neutron_subnet:  
+    type: OS::Neutron::Subnet
+    properties:
+      enable_dhcp: true
+      gateway_ip: {get_param: gateway_vn}
+      name: VN_SUBNET_TEST
+      network_id:
+        get_resource: neutron_net
+      cidr: {get_param: subnet_vn}
+
+  TEST_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: TEST_security_group
+      rules:
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: udp
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: icmp
+        - remote_ip_prefix: "::/0"
+          ethertype: IPv6
+          protocol: udp 
+        - remote_ip_prefix: "::/0"
+          ethertype: IPv6
+          protocol: tcp 
+        - remote_ip_prefix: "::/0"
+          ethertype: IPv6
+          protocol: icmp 
+
+
+  TEST_key:
+     type: OS::Nova::KeyPair
+     properties:
+       save_private_key: true
+       name: TEST_key
+
+#Virtual Machines Creation 
+  VM:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: vm_name }
+      image: { get_param: image_id }
+      flavor: { get_resource: test_flavor }
+      networks:
+        - port: {get_resource: port_instance}
+      availability_zone: { get_param: azone_2 }
+      key_name: { get_resource: TEST_key }
+
+  port_instance:
+    type: OS::Neutron::Port
+    depends_on: TEST_security_group
+    properties:
+      security_groups:
+        - TEST_security_group
+      network: { get_resource: neutron_net }
+      name: vmvnic
+      fixed_ips:
+        - ip_address: { get_param: ip_vm }
+
+  cinder_volume:
+    type: OS::Cinder::Volume
+    properties:
+      name: BSV
+      size: { get_param: volume_size }
+      volume_type: { get_param: volume_type }
+
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: cinder_volume }
+      instance_uuid: { get_resource: VM }
+      mountpoint: /dev/vdb
+
+  test_flavor:
+    type: OS::Nova::Flavor
+    properties: 
+      ram: 4096
+      disk: 50
+      swap: 0
+      vcpus: 4
+      extra_specs: {"hw:cpu_policy":"shared","hw:mem_page_size":"large"}
