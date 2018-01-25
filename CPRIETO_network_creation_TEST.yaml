@@ -31,7 +31,6 @@ resources:
     type: OS::Neutron::Net
     properties:
       name: {get_param: vn1_name}
-      value_specs: {"provider:network_type": "vxlan", "provider:segmentation_id": { get_param: segmentation_id1}}
 
   neutron_subnet_1:  
     type: OS::Neutron::Subnet
