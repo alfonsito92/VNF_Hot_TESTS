@@ -1,18 +1,15 @@
 heat_template_version: 2016-04-08
 
 description: >
-    This template creates a High Availability pair of Servers
+    This template creates a High Availability pair of Servers, with one network, one routers and automatic configuration for servers networks.
+    Created by Altran for UNICA lab certification.
+
 parameters:
 
     imageID:
         type: string
         label: VM image
         description: The image for the VMs
-
-    # sdFlavor:
-    #     type: string
-    #     label: VM flavor
-    #     description: The flavor that defines the VM size for the SD VMs
 
     vmNames:
         type: comma_delimited_list
@@ -37,17 +34,103 @@ parameters:
                 - anti-affinity
                 - affinity
 
+    vn_name: 
+        type: string
+        description: Id for the virtual network to create
+
+    private_subnet_name: 
+        type: string
+        description: Id for the virtual network to create
+
+    segmentation_id:
+        type: string
+        label: Segmentation id for VN
+
+    subnet_vn_CIDR:
+        type: string
+        label: Subnet for private_network
+
+    gateway_vn:
+        type: string
+        label: GW IP private_network
+
 resources:
+
+    #Networks Creation
+    neutron_HA_net:
+        type: OS::Neutron::Net
+        properties:
+            name: {get_param: vn_name}
+            value_specs: {"provider:network_type": "vxlan", "provider:segmentation_id": { get_param: segmentation_id}}
+
+    neutron_HA_subnet:  
+        type: OS::Neutron::Subnet
+        properties:
+            enable_dhcp: true
+            gateway_ip: {get_param: gateway_vn}
+            name: {get_param: private_subnet_name}
+            network_id:
+                get_resource: neutron_HA_net
+            cidr: {get_param: subnet_vn_CIDR}
+
+    routerHA1:
+        type: OS::Neutron::Router
+        properties:
+            name: routerHA1
+
+    routerHA1_interface:
+        type: OS::Neutron::RouterInterface
+        properties:
+            router_id: { get_resource: routerHA1 }
+            subnet_id: { get_resource: neutron_HA_subnet }
+
+    # Create Ports for media interface Virtual IP/MAC
+    privateVipPort:
+        type: OS::Neutron::Port
+        depends_on: security_group_HA_test
+        properties:
+            network: { get_resource: neutron_HA_net }
+            security_groups:
+                -  security_group_HA_test
+
+  #Security group
+    security_group_HA_test:
+        type: OS::Neutron::SecurityGroup
+        properties:
+            name: security_group_HA_test
+            rules:
+            - remote_ip_prefix: 0.0.0.0/0
+              protocol: udp
+            - remote_ip_prefix: 0.0.0.0/0
+              protocol: tcp
+            - remote_ip_prefix: 0.0.0.0/0
+              protocol: icmp
+            - remote_ip_prefix: "::/0"
+              ethertype: IPv6
+              protocol: udp 
+            - remote_ip_prefix: "::/0"
+              ethertype: IPv6
+              protocol: tcp 
+            - remote_ip_prefix: "::/0"
+              ethertype: IPv6
+              protocol: icmp 
+
+  #Key creation
+    key_HA_test:
+        type: OS::Nova::KeyPair
+        properties:
+            save_private_key: true
+            name: key_HA_test
 
     #Create sdFlavor
     flavor_App:
         type: OS::Nova::Flavor
         properties: 
-          ram: 16384
-          disk: 20
-          swap: 8192
-          vcpus: 4
-          extra_specs: {"hw:cpu_policy":"shared","hw:mem_page_size":"large"}
+            ram: 4096
+            disk: 20
+            swap: 0
+            vcpus: 2
+            extra_specs: {"hw:cpu_policy":"shared","hw:mem_page_size":"large"}
 
     # Create anti-affinity server group to keep SD instances apart
     SG:
@@ -68,5 +151,7 @@ resources:
                     vmNames: { get_param: vmNames }
                     image: { get_param: imageID }
                     flavor: { get_resource: flavor_App}
-                    serverGroup: {get_resource: SG}
+                    serverGroup: { get_resource: SG}
                     availabilityZone: { get_param: AZ }
+                    securityGroup: { get_resource: security_group_HA_test }
+                    privateNetwork: { get_resource: neutron_HA_net}

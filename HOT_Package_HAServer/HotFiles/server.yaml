@@ -31,12 +31,31 @@ parameters:
     availabilityZone:
         type: string
         label: Availability zone
-        description: The availability zone into which SD VMs should be placed       
+        description: The availability zone into which SD VMs should be placed    
+
+    securityGroup:
+        type: string
+        label: Security Group
+        description: Security group used by servers
+
+    privateNetwork:
+        type: string
+        label: private Network 
+        description: private network for servers
 
 resources:
             
-#     # Create a single SD server
-    serverTry:
+    #Port Creation
+    privatePort: 
+        type: OS::Neutron::Port
+        properties:
+            name: { list_join: ['-', [{get_param: [vmNames, get_param: index]}, "private"]]}
+            network: { get_param: privateNetwork }
+            security_groups:
+                - { get_param: securityGroup }
+
+    # Create a single server
+    server:
         type: OS::Nova::Server
         properties:
             image: { get_param: image }
@@ -44,3 +63,7 @@ resources:
             name:  { get_param: [ vmNames, get_param: index ] }
             availability_zone: { get_param: availabilityZone }
             scheduler_hints: { group: { get_param: serverGroup } }
+            config_drive: true
+            networks:
+                - port: { get_resource: privatePort }
+
