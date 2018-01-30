@@ -1,0 +1,46 @@
+heat_template_version: 2016-04-08
+
+parameters:
+
+    index:
+        type: number
+        label: Server index
+        description: Index into the lists of VM names
+
+    vmNames:
+        type: comma_delimited_list
+        label: VM Names
+        description: List of SD VM names
+
+    image:
+        type: string
+        label: VM image
+        description: The image for the SD VM
+
+    flavor:
+        type: string
+        label: VM flavor
+        description: The flavor that defines the VM size for the SD VM
+
+
+    serverGroup: 
+        type: string
+        label: SD server group
+        description: The server group that is used by SD servers
+
+    availabilityZone:
+        type: string
+        label: Availability zone
+        description: The availability zone into which SD VMs should be placed       
+
+resources:
+            
+#     # Create a single SD server
+    serverTry:
+        type: OS::Nova::Server
+        properties:
+            image: { get_param: image }
+            flavor: { get_param: flavor }
+            name:  { get_param: [ vmNames, get_param: index ] }
+            availability_zone: { get_param: availabilityZone }
+            scheduler_hints: { group: { get_param: serverGroup } }

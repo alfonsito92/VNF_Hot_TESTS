@@ -1,0 +1,72 @@
+heat_template_version: 2016-04-08
+
+description: >
+    This template creates a High Availability pair of Servers
+parameters:
+
+    imageID:
+        type: string
+        label: VM image
+        description: The image for the VMs
+
+    # sdFlavor:
+    #     type: string
+    #     label: VM flavor
+    #     description: The flavor that defines the VM size for the SD VMs
+
+    vmNames:
+        type: comma_delimited_list
+        label: VM Names
+        description: List of SD VM names
+
+    AZ:
+        type: string
+        label: Availability zone
+        description: The availability zone into which SD VMs should be placed
+
+
+    Affinity:
+        type: string
+        label: Affinity Policy 
+        description: >
+            Affinity Policy for SD HA VMs
+            Anti-affinity - the VMs will run on separate physical hosts
+            Affinity - the VMs will run on the same physical host
+        constraints:
+            - allowed_values:
+                - anti-affinity
+                - affinity
+
+resources:
+
+    #Create sdFlavor
+    flavor_App:
+        type: OS::Nova::Flavor
+        properties: 
+          ram: 16384
+          disk: 20
+          swap: 8192
+          vcpus: 4
+          extra_specs: {"hw:cpu_policy":"shared","hw:mem_page_size":"large"}
+
+    # Create anti-affinity server group to keep SD instances apart
+    SG:
+        type: OS::Nova::ServerGroup
+        properties:
+            name: ServerGroup
+            policies: [ get_param: Affinity ]
+
+    Servers:
+        type: OS::Heat::ResourceGroup
+        properties:
+            count: 2 
+            resource_def: 
+                # type: SV::Servers
+                type: HotFiles/server.yaml
+                properties:
+                    index: "%index%"
+                    vmNames: { get_param: vmNames }
+                    image: { get_param: imageID }
+                    flavor: { get_resource: flavor_App}
+                    serverGroup: {get_resource: SG}
+                    availabilityZone: { get_param: AZ }

@@ -1,0 +1,24 @@
+parameters:
+    # Name or ID of Glance VM image to deploy
+    # For example:
+    #   sdImage: nnSCZ739-img-vm_kvm
+    #sdImage: nnSCZ800p1-img-vm_kvm
+    imageID: Unica_Gen_2VNIC_Cirros_0.3.4
+
+    # The Avalibility Zone where new VM instances should be deployed
+    AZ: TypeB_01
+
+    # Comma separated list of names for new VM instances.
+    # For example:
+    # sdVmNames: 'vm1,vm2,vm3,vm4'
+    vmNames: 'vm_1,vm2'
+
+    # Hypervisor affinity rule to apply for HA-paired VMs.
+    # affinity - the SD VMs will be placed on the same physical server
+    # anti-affinity - the SD VMs will be placed on different physical servers
+    Affinity: anti-affinity
+
+
+# Nested-template yaml resources
+# resource_registry:
+#     SV::Servers: /HotFiles/server.yaml

@@ -1,7 +1,7 @@
 heat_template_version: 2015-04-30
 
 description:
-  Template to define new network in a HOT Package
+  Template to define new network in a HOT Package connected to VRF
 
 parameters: 
 
@@ -41,6 +41,19 @@ resources:
       network_id:
         get_resource: neutron_net_1 
       cidr: {get_param: subnet_vn1}
+
+  router_test:
+    type: OS::Neutron::Router
+    properties:
+      name: router_test
+
+  router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: router_test }
+      subnet_id: { get_resource: neutron_subnet_1 }
+
+  
 
 
 outputs:
