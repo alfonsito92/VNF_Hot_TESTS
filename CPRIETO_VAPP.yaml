@@ -23,12 +23,17 @@ parameters:
   vm_name:
     type: string
     description: Hostname name
-    default: TEST_vm
+    default: vm1
 
   vn_name: 
     type: string
     description: Id for the virtual network to create
-    default: VN_TEST
+    default: private_network
+
+  private_subnet_name: 
+    type: string
+    description: Id for the virtual network to create
+    default: private_subnet
 
   segmentation_id:
     type: string
@@ -42,12 +47,12 @@ parameters:
 
   subnet_vn:
     type: string
-    label: Subnet for VN_TEST
+    label: Subnet for private_network
     default: 192.168.1.0/24
 
   gateway_vn:
     type: string
-    label: GW IP VN_TEST
+    label: GW IP private_network
     default: 192.168.1.1
 
   volume_type:
@@ -94,28 +99,39 @@ resources:
     properties:
       enable_dhcp: true
       gateway_ip: {get_param: gateway_vn}
-      name: VN_SUBNET_TEST
+      name: {get_param: private_subnet_name}
       network_id:
         get_resource: neutron_net
       cidr: {get_param: subnet_vn}
 
-  router_test:
+  router1:
     type: OS::Neutron::Router
     properties:
-      name: router_test
+      name: router1
 
-  router_interface:
+  router1_interface:
     type: OS::Neutron::RouterInterface
     properties:
-      router_id: { get_resource: router_test }
+      router_id: { get_resource: router1 }
       subnet_id: { get_resource: neutron_subnet }
 
-  #Security group
+  #Port creation
+  port_instance1:
+    type: OS::Neutron::Port
+    depends_on: security_group_test
+    properties:
+      security_groups:
+        - security_group_test
+      network: { get_resource: neutron_net }
+      name: vmvnic
+      fixed_ips:
+        - ip_address: { get_param: ip_vm }
 
-  TEST_security_group:
+  #Security group
+  security_group_test:
     type: OS::Neutron::SecurityGroup
     properties:
-      name: TEST_security_group
+      name: security_group_test
       rules:
         - remote_ip_prefix: 0.0.0.0/0
           protocol: udp
@@ -133,50 +149,27 @@ resources:
           ethertype: IPv6
           protocol: icmp 
 
-
-  TEST_key:
+  #Key creation
+  key_test:
      type: OS::Nova::KeyPair
      properties:
        save_private_key: true
-       name: TEST_key
+       name: key_test
 
-#Virtual Machines Creation 
-  VM:
+  #Virtual Machines Creation 
+  vServer:
     type: OS::Nova::Server
     properties:
       name: { get_param: vm_name }
       image: { get_param: image_id }
       flavor: { get_resource: test_flavor }
       networks:
-        - port: {get_resource: port_instance}
+        - port: {get_resource: port_instance1}
       availability_zone: { get_param: azone_1 }
-      key_name: { get_resource: TEST_key }
+      key_name: { get_resource: key_test }
 
-  port_instance:
-    type: OS::Neutron::Port
-    depends_on: TEST_security_group
-    properties:
-      security_groups:
-        - TEST_security_group
-      network: { get_resource: neutron_net }
-      name: vmvnic
-      fixed_ips:
-        - ip_address: { get_param: ip_vm }
 
-  # cinder_volume:
-  #   type: OS::Cinder::Volume
-  #   properties:
-  #     name: BSV
-  #     size: { get_param: volume_size }
-  #     volume_type: { get_param: volume_type }
-
-  # volume_attachment:
-  #   type: OS::Cinder::VolumeAttachment
-  #   properties:
-  #     volume_id: { get_resource: cinder_volume }
-  #     instance_uuid: { get_resource: VM }
-  #     mountpoint: /dev/vdb
-
+  #Flavor Definition
   test_flavor:
     type: OS::Nova::Flavor
     properties: 
@@ -185,3 +178,21 @@ resources:
       swap: 0
       vcpus: 2
       extra_specs: {"hw:cpu_policy":"dedicated","hw:mem_page_size":"large"}
+
+  #New volume creation
+  # cinder_volume:
+  #   type: OS::Cinder::Volume
+  #   properties:
+  #     name: BSV
+  #     size: { get_param: volume_size }
+  #     volume_type: { get_param: volume_type }
+
+  #Volume attachment
+  # volume_attachment:
+  #   type: OS::Cinder::VolumeAttachment
+  #   properties:
+  #     volume_id: { get_resource: cinder_volume }
+  #     instance_uuid: { get_resource: VM }
+  #     mountpoint: /dev/vdb
+
+
