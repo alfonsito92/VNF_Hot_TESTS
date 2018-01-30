@@ -127,7 +127,7 @@ resources:
         type: OS::Nova::Flavor
         properties: 
             ram: 4096
-            disk: 20
+            disk: 40
             swap: 0
             vcpus: 2
             extra_specs: {"hw:cpu_policy":"shared","hw:mem_page_size":"large"}
