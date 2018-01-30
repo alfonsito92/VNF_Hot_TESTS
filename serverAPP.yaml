@@ -3,6 +3,7 @@ heat_template_version: 2015-04-30
 description: >
   Template to deploy a complete VAPP one network, one cinder volume (comment for now, not necessary), 
   one flavor, one security group and one key. Add Router with subnet interface.
+  Created by Altran.
 
 parameters:
 
@@ -75,6 +76,11 @@ parameters:
     label: Availability Zone
     default: TypeB_01
     #Server DELL R730
+
+  router_external_name:
+    type: string
+    label: VRF externally connected
+    default: external_vrf
 
 resources:
 
