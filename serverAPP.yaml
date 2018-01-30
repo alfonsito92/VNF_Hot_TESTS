@@ -6,15 +6,6 @@ description: >
 
 parameters:
 
-  # test_flavor:
-  #   type: string
-  #   label: Flavor for VM
-  #   description: Flavor predefined for VMs
-  #   default: '4CPU_4096MB_40GB_01'
-  #   constraints:
-  #     - allowed_values: [1CPU_1024MB_1GB_01, 1CPU_2048MB_20GB_01, 1CPU_4096MG_0GB_01, 1CPU_64MB_0GB_01, 2CPU_4096MB_40GB_01, 4CPU_4096MB_40GB_01, 4CPU_8192MB_40GB_01, 8CPU_12288MB_40GB_01, 8CPU_8192MB_40GB_01, m1.medium, m1.nano, m1.small, m1.tiny]
-  #       description: Id of the flavors allowed to instances to.
-
   image_id: 
     type: string
     description: Image for VM
