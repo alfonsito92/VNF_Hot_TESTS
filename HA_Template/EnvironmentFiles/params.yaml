@@ -1,0 +1,55 @@
+parameters:
+
+  #Name of image ID.
+  image_id: Unica_Gen_2VNIC_Cirros_0.3.4
+
+  #Name of one VM
+  vm_name: vm1
+
+  #VM list
+  vm_names: "vm1,vm2,vm3"
+
+  # Virtual Network Name
+  vn_name: private_network
+
+  #Virtual subnet name
+  vn_subnet_name: private_subnet_network
+
+  #Segmentation ID
+  segmentation_id: 1081
+
+  #Ip for one vm
+  ip_vm: 192.168.1.10
+
+  #Ip list for vms
+  ips_vms: "192.168.1.10,192.168.1.11,192.168.1.12"
+
+  #CIDR for subnet
+  subnet_vn_CIDR: 192.168.1.0/24
+
+  #Gateway for private network
+  vn_gateway: 192.168.1.1
+
+  #Name for virtual router
+  routerHAName: routerHA1
+
+  #Type of volume to create. Platinum, Gold or silver.
+  volume_type: Gold_01
+
+  #Size of volume
+  volume_size: 50
+
+  #Availability zone. TypeA_01 or TypeB_01
+  aZone: TypeB_01
+
+  #Name for security group
+  securityGroupName: secGroup1
+
+  #Key name
+  keyName: keyHA
+
+  #AffinityGroup Name
+  affinityGroupName: serverGroup
+
+  #Affinity Policy
+  # affinityPolicy: anti-affinity

@@ -1,8 +1,7 @@
-heat_template_version: 2015-04-30
+heat_template_version: 2016-04-08
 
 description: >
-  Template to deploy a complete VAPP one network, one cinder volume (comment for now, not necessary), 
-  one flavor, one security group and one key. Add Router with subnet interface.
+  Template to deploy a HA pair of servers (based in mainServer.yaml) connected to same subnet
   Created by Altran.
 
 parameters:
@@ -10,49 +9,52 @@ parameters:
   image_id: 
     type: string
     description: Image for VM
-    default: Unica_Gen_2VNIC_Cirros_0.3.4
 
   vm_name:
     type: string
     description: Hostname name
-    default: vm1
+
+  vm_names:
+    type: comma_delimited_list
 
   vn_name: 
     type: string
     description: Id for the virtual network to create
-    default: private_network
 
-  private_subnet_name: 
+  vn_subnet_name: 
     type: string
     description: Id for the virtual network to create
-    default: private_subnet
 
   segmentation_id:
     type: string
     label: Segmentation id for VN
-    default: 1234
 
   ip_vm:
     type: string
     label: IP address for VM
-    default: 192.168.1.10
 
-  subnet_vn:
+  ips_vms:
+    type: comma_delimited_list
+    label: IP addresses for VMs
+
+  subnet_vn_CIDR:
     type: string
     label: Subnet for private_network
-    default: 192.168.1.0/24
 
-  gateway_vn:
+  vn_gateway:
     type: string
     label: GW IP private_network
-    default: 192.168.1.1
+
+  routerHAName:
+    type: string
+    label: VRF externally connected
 
   volume_type:
     type: string
     description: Quality of the Volume to be created
     #default: Platinum_01
     # FLASH
-    default: Gold_01
+    #default: Gold_01
     # SAS
     #default: Silver_01
     # NSAS
@@ -60,27 +62,34 @@ parameters:
   volume_size:
     type: number
     description: Size of the block volume
-    default: 50
     constraints: 
       - range: { min: 1, max: 1024}
         description: max size 1TB
 
-  azone_1:
+  aZone:
     type: string
     label: Availability Zone
-    default: TypeA_01
-    #Server DELL R730
 
-  azone_2:
+  securityGroupName:
     type: string
-    label: Availability Zone
-    default: TypeB_01
-    #Server DELL R730
+    label: Security group name
 
-  router_external_name:
+  keyName:
     type: string
-    label: VRF externally connected
-    default: external_vrf
+    description: Name for Key
+
+  affinityGroupName:
+    type: string
+    description: Afinnity group name
+
+  # Bad definition
+  # affinityPolicy:
+  #   type: string
+  #   label: Affinity policy 
+  #   constraints:
+  #     - allowed_values: 
+  #       - anti-affinity
+  #       - affinity
 
 resources:
 
@@ -95,40 +104,28 @@ resources:
     type: OS::Neutron::Subnet
     properties:
       enable_dhcp: true
-      gateway_ip: {get_param: gateway_vn}
-      name: {get_param: private_subnet_name}
+      gateway_ip: {get_param: vn_gateway}
+      name: {get_param: vn_subnet_name}
       network_id:
         get_resource: neutron_net
-      cidr: {get_param: subnet_vn}
+      cidr: {get_param: subnet_vn_CIDR}
 
-  router1:
+  routerHA:
     type: OS::Neutron::Router
     properties:
-      name: router1
+      name: { get_param: routerHAName }
 
-  router1_interface:
+  routerHA_interface:
     type: OS::Neutron::RouterInterface
     properties:
-      router_id: { get_resource: router1 }
+      router_id: { get_resource: routerHA }
       subnet_id: { get_resource: neutron_subnet }
 
-  #Port creation
-  port_instance1:
-    type: OS::Neutron::Port
-    depends_on: security_group_test
-    properties:
-      security_groups:
-        - security_group_test
-      network: { get_resource: neutron_net }
-      name: vmvnic
-      fixed_ips:
-        - ip_address: { get_param: ip_vm }
-
   #Security group
-  security_group_test:
+  HASecurityGroup:
     type: OS::Neutron::SecurityGroup
     properties:
-      name: security_group_test
+      name: { get_param: securityGroupName }
       rules:
         - remote_ip_prefix: 0.0.0.0/0
           protocol: udp
@@ -147,27 +144,14 @@ resources:
           protocol: icmp 
 
   #Key creation
-  key_test:
+  HAKey:
      type: OS::Nova::KeyPair
      properties:
        save_private_key: true
-       name: key_test
-
-  #Virtual Machines Creation 
-  vServer:
-    type: OS::Nova::Server
-    properties:
-      name: { get_param: vm_name }
-      image: { get_param: image_id }
-      flavor: { get_resource: test_flavor }
-      networks:
-        - port: {get_resource: port_instance1}
-      availability_zone: { get_param: azone_1 }
-      key_name: { get_resource: key_test }
-
+       name: { get_param: keyName }
 
   #Flavor Definition
-  test_flavor:
+  HAflavor:
     type: OS::Nova::Flavor
     properties: 
       ram: 4096
@@ -176,20 +160,28 @@ resources:
       vcpus: 2
       extra_specs: {"hw:cpu_policy":"dedicated","hw:mem_page_size":"large"}
 
-  #New volume creation
-  # cinder_volume:
-  #   type: OS::Cinder::Volume
-  #   properties:
-  #     name: BSV
-  #     size: { get_param: volume_size }
-  #     volume_type: { get_param: volume_type }
+  serverGroup:
+    type: OS::Nova::ServerGroup
+    properties:
+      name: { get_param: affinityGroupName }
+      policies: ['anti-affinity']
 
-  #Volume attachment
-  # volume_attachment:
-  #   type: OS::Cinder::VolumeAttachment
-  #   properties:
-  #     volume_id: { get_resource: cinder_volume }
-  #     instance_uuid: { get_resource: VM }
-  #     mountpoint: /dev/vdb
-
-
+  servers:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 3
+      resource_def:
+        type: HotFiles/mainServer.yaml
+        properties:
+          index: "%index%"
+          vMnames: { get_param: vm_names }
+          image: { get_param: image_id }
+          flavor: { get_resource: HAflavor }
+          serverGroup: { get_resource: serverGroup }
+          securityGroup: { get_resource: HASecurityGroup }
+          privateNetwork: { get_resource: neutron_net }
+          ipList: { get_param: ips_vms }
+          volumeType: { get_param: volume_type }
+          volumeSize: { get_param: volume_size }
+          aZone: { get_param: aZone }
+          key: { get_resource: HAKey }
