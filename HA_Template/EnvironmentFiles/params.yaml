@@ -3,9 +3,6 @@ parameters:
   #Name of image ID.
   image_id: Unica_Gen_2VNIC_Cirros_0.3.4
 
-  #Name of one VM
-  vm_name: vm1
-
   #VM list
   vm_names: "vm1,vm2,vm3"
 
@@ -17,9 +14,6 @@ parameters:
 
   #Segmentation ID
   segmentation_id: 1081
-
-  #Ip for one vm
-  ip_vm: 192.168.1.10
 
   #Ip list for vms
   ips_vms: "192.168.1.10,192.168.1.11,192.168.1.12"

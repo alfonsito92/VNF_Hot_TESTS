@@ -10,10 +10,6 @@ parameters:
     type: string
     description: Image for VM
 
-  vm_name:
-    type: string
-    description: Hostname name
-
   vm_names:
     type: comma_delimited_list
 
@@ -28,10 +24,6 @@ parameters:
   segmentation_id:
     type: string
     label: Segmentation id for VN
-
-  ip_vm:
-    type: string
-    label: IP address for VM
 
   ips_vms:
     type: comma_delimited_list
