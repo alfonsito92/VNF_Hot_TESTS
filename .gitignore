@@ -1,3 +1,6 @@
 # Ignore png files
 *.png
 *.PNG
+
+#Ignore zip
+*.zip
